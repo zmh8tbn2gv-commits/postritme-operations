@@ -6,4 +6,4 @@ De controle bekijkt bereikbaarheid en technische SEO van zes pagina’s. Zij koo
 
 Gebruik: `python3 monitor.py`.
 
-De geplande GitHub Actions-controle draait dagelijks. GitHub kan geplande uitvoeringen vertragen; openbare repositories kunnen na 60 dagen zonder activiteit hun planning verliezen. Controleer dan de Actions-pagina. Dit is technisch toezicht, geen autonome marketing- of omzetagent.
+De dagelijkse GitHub Actions-controle is voorbereid, maar nog NIET actief: de huidige GitHub-koppeling mag geen workflowbestand toevoegen. Het workflowbestand is lokaal beschikbaar. Na autorisatie kan het worden toegevoegd en uitgevoerd. GitHub kan geplande uitvoeringen vertragen; openbare repositories kunnen na 60 dagen zonder activiteit hun planning verliezen. Controleer dan de Actions-pagina. Dit is technisch toezicht, geen autonome marketing- of omzetagent.
