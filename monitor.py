@@ -4,7 +4,7 @@ import sys, urllib.request, urllib.parse, json, os
 from html.parser import HTMLParser
 from datetime import datetime, timezone
 ORIGIN = "https://postritme.pzcqqb56gx.chatgpt.site"
-PATHS = ["/", "/inspiratie/", "/contentkalender-horeca/", "/contentkalender-kappers-beauty/", "/contentplanning-zelfstandig-adviseurs/", "/privacy/"]
+PATHS = ["/", "/inspiratie/", "/contentkalender-horeca/", "/contentkalender-kappers-beauty/", "/contentplanning-zelfstandig-adviseurs/", "/privacy/", "/campagnepakket/"]
 class Page(HTMLParser):
     def __init__(self):
         super().__init__(); self.h1 = 0; self.title = ""; self.in_title = False; self.description = ""; self.canonical = ""; self.noindex = False; self.links = []

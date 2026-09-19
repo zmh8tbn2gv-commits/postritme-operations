@@ -59,7 +59,11 @@ class OfficeTests(unittest.TestCase):
         self.assertIsNone(saved["roles"]["verkoop"]["metrics"]["orders"])
         self.assertEqual(len(saved["roles"]["verkoop"]["concepts"]), 3)
         self.assertEqual(saved["roles"]["verkoop"]["concepts"][2]["status"], "blocked")
-        self.assertIn("betaalprovider niet gekoppeld", saved["roles"]["verkoop"]["blockers"])
+        self.assertIn("livebetaling niet geactiveerd", saved["roles"]["verkoop"]["blockers"])
+        payment = saved["roles"]["verkoop"]["payment"]
+        self.assertEqual(payment["provider"], "Stripe / Managed Payments")
+        self.assertEqual(payment["sandbox_status"], "ready")
+        self.assertEqual(payment["live_status"], "blocked")
 
     def test_demo_never_calls_live_audit_and_is_visibly_marked(self):
         with patch.object(office.monitor, "audit", side_effect=AssertionError("demo network call")) as audit:

@@ -3,7 +3,7 @@
 
 Gebruik: python3 office.py --output /pad/naar/rapporten
 Demo:    python3 office.py --offline-demo --output /apart/pad/naar/demo
-Exitcodes: 0 ready, 2 blocked (ook een ontbrekende betaalprovider), 1 error.
+Exitcodes: 0 ready, 2 blocked (ook niet-geactiveerde livebetaling), 1 error.
 """
 
 import argparse
@@ -83,8 +83,9 @@ def seo(technical):
 
 
 def sales(technical, seo_result, offline_demo):
-    blockers = ["betaalprovider niet gekoppeld", "campagnepakket nog NIET te koop",
-                "Lemon Squeezy: geverifieerd verkopersaccount, echte verkopersgegevens, identiteitscontrole en winkeltoelating ontbreken.",
+    blockers = ["livebetaling niet geactiveerd", "campagnepakket nog NIET te koop",
+                "Stripe/Managed Payments: sandbox ingericht; liveaccount niet geactiveerd of geverifieerd.",
+                "Geen echte checkout, levering of productie-APIkoppeling ingericht.",
                 "Geen marketingkanaal gekoppeld.",
                 "GitHub-workflowrechten ontbreken; de voorbereide planning is niet actief."]
     if technical["status"] == "error":
@@ -97,9 +98,10 @@ def sales(technical, seo_result, offline_demo):
         "status": "blocked", "depends_on": ["techniek", "seo"],
         "technical_status": technical["status"], "seo_status": seo_result["status"],
         "blockers": blockers,
-        "payment": {"status": "blocked", "provider": "Lemon Squeezy", "signal": "betaalprovider niet gekoppeld",
+        "payment": {"status": "blocked", "provider": "Stripe / Managed Payments", "signal": "livebetaling niet geactiveerd",
+                    "sandbox_status": "ready", "live_status": "blocked",
                     "source": "Aangeleverde projectstatus; niet vastgesteld via de publieke HTML-audit.",
-                    "verification": "Aanmeldformulier bevat alleen openbare naam/site; geen account of checkout actief. Geen transactiekoppeling in dit beheerpakket."},
+                    "verification": "Stripe-account aangemaakt; publieke website en productomschrijving ingevuld. Postritme-sandbox met product en Managed Payments-testlink voor €9 eenmalig inclusief belasting ingericht; nog geen testtransactie uitgevoerd. Ready geldt alleen voor deze inrichting: liveaccount niet geactiveerd of geverifieerd; geen echte checkout, levering of productie-APIkoppeling."},
         "metrics": {"revenue_eur": None, "orders": None, "visitors": None,
                     "source": "Geen meet- of transactiedata aangesloten; onbekend is geen nul."},
         "concepts": [
@@ -114,12 +116,12 @@ def sales(technical, seo_result, offline_demo):
              "cta": "Plan je salonposts gratis", "destination": "/contentkalender-kappers-beauty/",
              "next_step": "Controleer de plannerroute en werk drie voorbeelden uit zonder klantfoto's of onbewezen resultaatclaims."},
             {"id": "campagnepakket-concept", "status": "blocked", "offer": "Apart campagnepakket — nog NIET te koop",
-             "proposed_intro_price_eur": 9, "price_status": "Voorgestelde eenmalige introductieprijs; nog niet live.",
+             "proposed_intro_price_eur": 9, "price_status": "Eenmalige testprijs inclusief belasting; nog niet live.",
              "audience": "Ondernemers die meer uitgewerkte campagne-inhoud willen",
-             "channel": "Intern productconcept; geen openbare bestelpagina",
-             "copy": "Het campagnepakket is klaar: 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. Nog niet te koop.",
-             "cta": "Nog niet beschikbaar", "destination": None,
-             "next_step": "Rond verkopersverificatie en winkeltoelating af; bevestig prijs en voorwaarden; voer het product bij Lemon Squeezy in en test checkout en levering."},
+             "channel": "Openbare productpagina; nog geen checkout",
+             "copy": "Het campagnepakket is klaar: 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. De ZIP bevat 4 Markdown-bestanden en één printbare LEES-MIJ.html. Nog niet te koop.",
+             "cta": "Nog niet te koop", "destination": "/campagnepakket/",
+             "next_step": "Rond liveactivatie en verificatie bij Stripe af; bevestig prijs en voorwaarden; richt het product voor Managed Payments in en test checkout en bestandslevering."},
         ],
         "concept_status_note": "Ready betekent lokaal uitgewerkt concept, geen gepubliceerde of goedgekeurde campagne.",
         "actions_executed": [],
@@ -137,7 +139,7 @@ def task_candidates(roles):
                       "status": "ready", "priority": item["priority"],
                       "title": item["path"] + " — " + item["issue"], "detail": item["action"]})
     tasks.append({"key": "verkoop:betaalprovider", "role": "verkoop", "status": "blocked", "priority": 1,
-                  "title": "Betaalprovider niet gekoppeld", "detail": "Lemon Squeezy: bevoegde eigenaar moet echte verkopersgegevens aanleveren, identiteitscontrole en winkeltoelating afronden en checkout testen. Alleen openbare naam/site staat in het formulier; geen account actief."})
+                  "title": "Livebetaling niet geactiveerd", "detail": "Stripe-account en Postritme-sandbox voor online verkoop/Managed Payments zijn ingericht. De bevoegde eigenaar moet het liveaccount activeren en verifiëren. Echte checkout, levering en productie-APIkoppeling ontbreken."})
     tasks.append({"key": "verkoop:marketingkanaal", "role": "verkoop", "status": "blocked", "priority": 2,
                   "title": "Geen marketingkanaal gekoppeld", "detail": "Kies een kanaal en regel toegang en toestemming voordat een concept kan worden gepubliceerd of verstuurd."})
     tasks.append({"key": "verkoop:workflowrechten", "role": "verkoop", "status": "blocked", "priority": 2,
@@ -204,7 +206,9 @@ def markdown(report):
         lines.append("Geen prioriteiten vastgesteld." if roles["techniek"]["status"] != "error" else "Geen volledige SEO-beoordeling mogelijk.")
     lines += ["", roles["seo"]["limitation"], "", "## Verkoop: blocked", ""]
     lines += ["- " + blocker for blocker in roles["verkoop"]["blockers"]]
-    lines += ["", roles["verkoop"]["payment"]["source"], "",
+    lines += ["", "Betaalroute: " + roles["verkoop"]["payment"]["provider"] + ". Sandbox: **" + roles["verkoop"]["payment"]["sandbox_status"] + "**; live: **" + roles["verkoop"]["payment"]["live_status"] + "**.", "",
+              roles["verkoop"]["payment"]["verification"], "",
+              roles["verkoop"]["payment"]["source"], "",
               "Omzet, bestellingen en bezoekers: **onbekend (null)**. Er is geen transactiemeting aangesloten.", "",
               roles["verkoop"]["concept_status_note"], ""]
     for concept in roles["verkoop"]["concepts"]:
