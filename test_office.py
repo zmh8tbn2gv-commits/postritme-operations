@@ -77,7 +77,10 @@ class OfficeTests(unittest.TestCase):
         self.assertFalse(saved["roles"]["verkoop"]["delivery"]["end_to_end_verified"])
         self.assertEqual(saved["roles"]["regie"]["credit_guard"]["status"], "blocked")
         self.assertIsNone(saved["roles"]["regie"]["credit_guard"]["remaining_credits"])
-        self.assertFalse(saved["roles"]["regie"]["heartbeat"]["active"])
+        self.assertIsNone(saved["roles"]["regie"]["heartbeat"]["active"])
+        self.assertEqual(saved["roles"]["regie"]["heartbeat"]["automation_id"],
+                         "postritme-regie-techniek-seo-en-sales")
+        self.assertIsNone(saved["execution"]["schedule_active"])
 
     def test_demo_never_calls_live_audit_and_is_visibly_marked(self):
         with patch.object(office.monitor, "audit", side_effect=AssertionError("demo network call")) as audit:

@@ -8,10 +8,10 @@ Peildatum: 20 september 2026. Dit document is de duurzame overdracht voor de hoo
 - Stripe-accountactivatie is in de UI voltooid. Liveproduct `prod_VI6OJQdlN0bFkl` bestaat voor €9 eenmalig inclusief belasting. Livecheckout is nog niet gemaakt of ingeschakeld.
 - De beperkte Checkout-sleutel ontbreekt: `Verification required` blijft laden. Los de verificatiestap op; omzeil deze controle niet.
 - Het pakket is klaar: 36 briefings, drie branches, vier weken per branche; ZIP met vier Markdown-bestanden en een printbare `LEES-MIJ.html`.
-- De backend heeft volgens de projectoverdracht acht lokale tests doorstaan. Livebetaling en levering zijn nog niet bewezen. Controleer `/api/health`; een lokale test bewijst geen deployment of betaling.
+- Siteversie 4 is op 2026-09-20 succesvol gedeployed (`appgdep_6aaf93a79c508191b0c555f48b6eed27`). De volgende audit gaf zeven routes HTTP 200 en `/api/health`: `status: ok`, `storage: ready`, `payments: disabled`, `webhooks: disabled`. De backend heeft volgens de projectoverdracht acht lokale tests doorstaan. Livebetaling en levering zijn nog niet bewezen; doe bij volgende rondes een nieuwe controle.
 - Geen marketingkanaal of verkeers-/omzetmeting aangesloten. Geen echte omzet aangetoond; onbekende bedragen blijven `null`.
 - GitHub weigert workflowupload wegens ontbrekende rechten. Het ongetrackte workflowbestand blijft buiten commits en pushes; gebruik geen andere credentialroute om dit te omzeilen.
-- Native heartbeat wordt door de hoofdtaak ingericht. Tot een succesvolle toolbevestiging is deze niet actief. Beoogde frequentie: elke zes uur. Lokale uitvoering vereist een beschikbare computer en Codex-app; er is geen ingerichte cloud-AI-uitvoering buiten Codex en geen garantie op ononderbroken 24/7 werk.
+- Native heartbeat `postritme-regie-techniek-seo-en-sales` is op 2026-09-20 geconfigureerd voor elke zes uur lokaal en toen native als `ACTIVE` bevestigd. Python bevestigt de actuele activiteit of uitvoering niet; de planning kan later worden gepauzeerd. Gebruik dit automation-id met `automation_update` voor inspectie of pauzeren. Computer en Codex-app moeten beschikbaar blijven; er is geen ingerichte cloud-AI-uitvoering buiten Codex of garantie op ononderbroken 24/7 werk.
 
 ## Verdeling
 
@@ -29,7 +29,7 @@ De vier rollen delen één taakvoorraad. Ze vereisen geen vier parallelle AI-run
 1. Doe als eerste handeling native `mcp__codex_app__get_usage_limits`. De start van een AI-ronde kan zelf al verbruik veroorzaken; controleer vóór verder uitvoerend werk en opnieuw vóór een dure vervolgactie.
 2. Gebruik bij voorkeur `rateLimitsByLimitId.codex.credits.balance`, anders de bijbehorende `rateLimits.credits.balance`. Alleen een geldige actuele numerieke waarde telt. `usedPercent` is verbruik binnen een tijdvenster, geen aantal credits. Ontbrekende, tegenstrijdige of onleesbare waarden betekenen onbekend.
 3. Oorspronkelijk opgegeven saldo: 1.250; maximaal 1.200 te besteden. Houd daarnaast 100 credits reserve. Stop bij saldo **100 of lager**; vanaf 1.250 betekent dit hoogstens 1.150 besteed. Andere accountactiviteit verbruikt hetzelfde saldo. Verhoog het budget niet automatisch bij een top-up of reset.
-4. Bij onbekend saldo, bereikt budget of reserve: geen extra AI-, onderzoeks-, herstel- of marketingtaken. Pauzeer de bijbehorende native heartbeat met de automation-tool zodra het automation-id bekend is, behoud bestaande instellingen en registreer de reden. Meld eenmaal dat invoer of budgetcontrole nodig is. Activeer niet zelf opnieuw.
+4. Bij onbekend saldo, bereikt budget of reserve: geen extra AI-, onderzoeks-, herstel- of marketingtaken. Lees de bestaande instellingen van `postritme-regie-techniek-seo-en-sales` met `automation_update` en pauzeer ditzelfde id; behoud overige instellingen en registreer de reden. Meld eenmaal dat invoer of budgetcontrole nodig is. Activeer niet zelf opnieuw.
 5. Registreer lokaal alleen tijdstip, bruikbaar saldo, beslissing en afgeronde taak. Bewaar geen volledig accountantwoord, account-id, tokens of sleutels in deze repository. Leid geen projectspecifieke kosten af uit een accountbreed saldo.
 6. Werk in korte stappen, zonder onnodige parallelle runs of extra modellen. Koop geen credits, wissel geen reset in en activeer geen automatische uitgaven.
 

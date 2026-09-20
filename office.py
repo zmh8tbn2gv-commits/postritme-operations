@@ -91,7 +91,7 @@ def sales(technical, seo_result, offline_demo):
                 "Stripe-sleutel voor beperkte Checkout-toegang ontbreekt: Verification required blijft laden.",
                 "Betaling en levering zijn nog niet van begin tot eind getest.",
                 "Geen marketingkanaal gekoppeld.",
-                "GitHub-workflowrechten ontbreken; de voorbereide planning is niet actief."]
+                "GitHub-workflowrechten ontbreken; de voorbereide GitHub-planning is niet actief."]
     if technical["status"] == "error":
         blockers.append("Publieke audit onvolledig of mislukt; bereikbaarheid eerst herstellen.")
     elif technical["status"] == "blocked":
@@ -146,7 +146,9 @@ def coordination(roles):
         "next_action": "Herstel de publieke audit." if roles["techniek"]["status"] == "error" else
                        "Controleer credits en de backenddeployment; rond levering af en test daarna checkout en levering.",
         "protocol": "COORDINATOR.md", "parallel_runs": 1,
-        "heartbeat": {"status": "blocked", "active": False, "reason": "Nog niet ingericht in deze projectstatus."},
+        "heartbeat": {"status": "ready", "configured_at": "2026-09-20",
+                      "automation_id": "postritme-regie-techniek-seo-en-sales", "interval_hours": 6,
+                      "active": None, "reason": "Geconfigureerd op 2026-09-20; actuele activiteit en uitvoering niet door Python bevestigd. Computer en app moeten beschikbaar zijn."},
         "credit_guard": {
             "status": "blocked", "remaining_credits": None,
             "initial_credits_user_reported": 1250, "max_spend_credits": 1200, "reserve_credits": 100,
@@ -173,7 +175,7 @@ def task_candidates(roles):
         {"key": "regie:credits", "role": "regie", "status": "blocked", "priority": 1,
          "title": "Actuele credits controleren vóór vervolgwerk", "detail": roles["regie"]["credit_guard"]["reason"] + " " + roles["regie"]["credit_guard"]["stop_rule"]},
         {"key": "regie:heartbeat", "role": "regie", "status": "ready", "priority": 2,
-         "title": "Native heartbeat inrichten", "detail": "Gebruik COORDINATOR.md, één coördinator tegelijk en meld alleen betekenisvolle verandering. Nog niet actief."},
+         "title": "Native heartbeatstatus controleren", "detail": "Geconfigureerd op 2026-09-20, elke zes uur lokaal; actuele activiteit en uitvoering niet door Python bevestigd. Gebruik COORDINATOR.md en automation-id postritme-regie-techniek-seo-en-sales."},
         {"key": "techniek:levering", "role": "techniek", "status": "ready", "priority": 1,
          "title": "Backenddeployment en levering controleren", "detail": "Backend: 8 lokale tests geslaagd. Controleer /api/health, productieconfiguratie en geautoriseerde bestandslevering vóór livecheckout; disabled flags zijn geen betaalmogelijkheid."},
         {"key": "seo:meting", "role": "seo", "status": "blocked", "priority": 3,
@@ -184,7 +186,7 @@ def task_candidates(roles):
     tasks.append({"key": "verkoop:marketingkanaal", "role": "verkoop", "status": "blocked", "priority": 2,
                   "title": "Geen marketingkanaal gekoppeld", "detail": "Kies een kanaal en regel toegang en toestemming voordat een concept kan worden gepubliceerd of verstuurd."})
     tasks.append({"key": "verkoop:workflowrechten", "role": "regie", "status": "blocked", "priority": 2,
-                  "title": "GitHub-workflowrechten ontbreken", "detail": "De bestaande GitHub-koppeling weigert workflowrechten; de voorbereide beheerplanning is niet actief. Rechten moeten via de bevoegde eigenaar worden geregeld."})
+                  "title": "GitHub-workflowrechten ontbreken", "detail": "De bestaande GitHub-koppeling weigert workflowrechten; de voorbereide GitHub-planning is niet actief. De native Codex-heartbeat staat hier los van. Rechten moeten via de bevoegde eigenaar worden geregeld."})
     for concept in roles["verkoop"]["concepts"]:
         tasks.append({"key": "verkoop:" + concept["id"], "role": "verkoop", "status": concept["status"],
                       "priority": 2, "title": concept["offer"] + " — " + concept["audience"],
@@ -234,7 +236,7 @@ def markdown(report):
              "Status: **" + report["status"] + "** · " + report["checked_at"], "",
              "Vier regelgestuurde rollen: Regie, Techniek, SEO en Sales. Geen LLM/API-integratie of autonome AI in dit script. Geen publicatie, mail, betaling of planning uitgevoerd.", "",
              "## Regie — hoofdcoördinator", "", "Status: **" + roles["regie"]["status"] + "**. " + roles["regie"]["next_action"], "",
-             "Native heartbeat nog niet ingericht. Volg COORDINATOR.md; voer één ronde tegelijk uit.", "",
+             "Native heartbeat geconfigureerd op 2026-09-20, elke zes uur lokaal. Actuele activiteit en uitvoering niet door Python bevestigd. Volg COORDINATOR.md; voer één ronde tegelijk uit.", "",
              "Creditcontrole: **blocked**. Actueel saldo onbekend in dit rapport. Maximaal 1.200 van opgegeven 1.250 credits, met 100 credits reserve: effectieve bestedingsgrens 1.150. Controleer native get_usage_limits vóór elke AI-ronde en pauzeer bij onbekend saldo of 100 credits resterend. Best effort; geen harde accountcap.", "",
              "## Techniek en SEO", "",
              "Techniek: **" + roles["techniek"]["status"] + "**. SEO: **" + roles["seo"]["status"] + "**.", "",
@@ -297,7 +299,7 @@ def run(output, offline_demo=False):
                           else "LIVE — publieke HTML-audit; verkoopstatus is aangeleverde projectinformatie",
         "status": "error" if roles["techniek"]["status"] == "error" or inventory["status"] == "error" else "blocked",
         "roles": roles, "inventory": inventory,
-        "execution": {"type": "rule_based_python", "llm_integration": False, "external_mutations": [], "schedule_active": False},
+        "execution": {"type": "rule_based_python", "llm_integration": False, "external_mutations": [], "schedule_configured": True, "schedule_active": None},
     }
     atomic_write(output / "report.json", json_text(report))
     atomic_write(output / "report.md", markdown(report))

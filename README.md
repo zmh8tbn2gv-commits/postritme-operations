@@ -15,7 +15,7 @@ De uitvoer bestaat uit `report.json`, `report.md` en `tasks.json`. Herhaalde uit
 
 [COORDINATOR.md](COORDINATOR.md) bevat het duurzame werkprotocol. Regie bewaakt prioriteiten, afhankelijkheden, credits en de gedeelde taakvoorraad. Techniek controleert bereikbaarheid en levering, SEO werkt auditbevindingen uit en Sales bewaakt product, checkout en marketingvoorbereiding.
 
-`office.py` voert vaste Python-regels uit, zonder gekoppeld AI-model of marketingkanaal. Een native Codex-heartbeat wordt afzonderlijk ingericht; deze versie claimt nog geen actieve planning of 24/7 beschikbaarheid. Lokale uitvoering vereist een beschikbare computer en Codex-app. Er is geen ingerichte cloud-AI-uitvoering buiten Codex.
+`office.py` voert vaste Python-regels uit, zonder gekoppeld AI-model of marketingkanaal. De native Codex-heartbeat `postritme-regie-techniek-seo-en-sales` is op 2026-09-20 geconfigureerd voor elke zes uur lokaal en toen als actief bevestigd. Python bevestigt de actuele activiteit of uitvoering niet: de planning kan later worden gepauzeerd. Computer en Codex-app moeten beschikbaar blijven; er is geen ingerichte cloud-AI-uitvoering buiten Codex of garantie op 24/7 beschikbaarheid.
 
 De coördinator moet vóór elke AI-ronde native `get_usage_limits` lezen. Maximaal 1.200 van de opgegeven 1.250 credits mogen worden besteed, met 100 credits reserve: de effectieve grens is 1.150 vanaf het oorspronkelijke saldo. Bij 100 credits resterend of onbekend saldo pauzeert het werk. Dit is een best effort werkinstructie, geen harde accountcap. Python leest het native saldo niet zelf en rapporteert creditcontrole daarom als `blocked`, met onbekend actueel saldo.
 
@@ -25,7 +25,7 @@ Accountactivatie is in de Stripe-UI voltooid. Liveproduct `prod_VI6OJQdlN0bFkl` 
 
 Het campagnepakket bevat 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. De ZIP bevat 4 Markdown-bestanden en één printbare `LEES-MIJ.html`. `/campagnepakket/` is openbaar, maar het pakket is nog niet te koop.
 
-De leveringsbackend heeft volgens de aangeleverde projectstatus acht lokale tests doorstaan. Productiebetaling en levering zijn nog niet van begin tot eind bewezen. De healthcontrole leest live `status`, `storage`, `payments` en `webhooks`; `configured` bewijst alleen de gerapporteerde configuratie. Een gezonde endpoint bewijst geen geslaagde betaling of download. Omzet, bestellingen en bezoekers blijven onbekend (`null`) zonder meetgegevens.
+Siteversie 4 is op 2026-09-20 succesvol gedeployed (`appgdep_6aaf93a79c508191b0c555f48b6eed27`). De daaropvolgende audit gaf zeven routes met HTTP 200 en healthflags `status: ok`, `storage: ready`, `payments: disabled`, `webhooks: disabled`. De backend heeft volgens de aangeleverde projectstatus acht lokale tests doorstaan. Productiebetaling en levering zijn nog niet van begin tot eind bewezen. Nieuwe healthcontroles lezen de actuele flags; `configured` bewijst alleen de gerapporteerde configuratie. Een gezonde endpoint bewijst geen geslaagde betaling of download. Omzet, bestellingen en bezoekers blijven onbekend (`null`) zonder meetgegevens.
 
 ## GitHub
 
