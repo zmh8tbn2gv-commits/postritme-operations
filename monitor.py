@@ -45,14 +45,32 @@ def audit(origin=ORIGIN):
             rows.append({"path":path,"status":"error","issues":[str(exc)]})
     return rows
 
+def audit_health(origin=ORIGIN):
+    """Public configuration flags only; not proof of payment or delivery."""
+    url = origin + "/api/health"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Postritme-availability-check/1.0"})
+        with urllib.request.urlopen(req, timeout=20) as response:
+            if urllib.parse.urlsplit(response.url).netloc != urllib.parse.urlsplit(origin).netloc:
+                raise ValueError("Unexpected health redirect")
+            data = json.loads(response.read(10_000).decode("utf-8"))
+        allowed = {"status": {"ok"}, "storage": {"ready", "unavailable"},
+                   "payments": {"configured", "disabled"}, "webhooks": {"configured", "disabled"}}
+        if not isinstance(data, dict) or any(data.get(key) not in values for key, values in allowed.items()):
+            raise ValueError("Unexpected health payload")
+        return {"status": "ready", "url": url, "flags": {key: data[key] for key in allowed}, "error": None}
+    except Exception as exc:
+        return {"status": "error", "url": url, "flags": None, "error": str(exc)}
+
 def main():
-    rows=audit(); failed=any(row["issues"] for row in rows)
-    report={"checked_at":datetime.now(timezone.utc).isoformat(),"ok":not failed,"checks":rows}
+    rows=audit(); health=audit_health(); failed=any(row["issues"] for row in rows) or health["status"] == "error"
+    report={"checked_at":datetime.now(timezone.utc).isoformat(),"ok":not failed,"checks":rows,"health":health}
     print(json.dumps(report,ensure_ascii=False,indent=2))
     if os.environ.get("GITHUB_STEP_SUMMARY"):
         with open(os.environ["GITHUB_STEP_SUMMARY"],"a",encoding="utf-8") as f:
             f.write("## Postritme: "+("controle geslaagd" if not failed else "actie nodig")+"\n\n")
             f.write("Controle op bereikbaarheid, paginatitels, H1, beschrijvingen, canonical en indexeerbaarheid. Dit meet geen bezoekers of omzet.\n\n")
             for row in rows: f.write("- "+row["path"]+": "+("OK" if not row["issues"] else "; ".join(row["issues"]))+"\n")
+            f.write("- /api/health: "+json.dumps(health,ensure_ascii=False)+"\n")
     return int(failed)
 if __name__ == "__main__": sys.exit(main())

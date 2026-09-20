@@ -1,21 +1,32 @@
 # Postritme beheer
 
-Leescontroles voor de publieke Postritme-website. Dit project bevat geen bankgegevens, betaalcodes of betaalde content.
+Dit pakket controleert zeven publieke pagina's en `/api/health`. Het publiceert geen berichten, verstuurt geen mail en verwerkt geen betalingen. Een geslaagde controle bewijst geen omzet, ranking, uitbetaling of werkende bestandslevering.
 
-De controle bekijkt bereikbaarheid en technische SEO van zeven pagina’s, inclusief de openbare productpagina `/campagnepakket/`. Zij koopt geen advertenties, publiceert geen berichten en verwerkt geen betalingen. Een geslaagde controle zegt niets over verkeer, ranking of omzet.
+## Uitvoeren
 
-Gebruik voor alleen de websitecontrole: `python3 monitor.py`.
+- Website en healthcontrole: `python3 monitor.py`.
+- Rollen, rapporten en taken: `python3 office.py --output office-output`.
+- Tests zonder liveverzoeken: `python3 -m unittest -v test_office.py`.
+- Afzonderlijke fixture-demo: `python3 office.py --offline-demo --output reports/demo`.
 
-## Voorbereid kantoor
+De uitvoer bestaat uit `report.json`, `report.md` en `tasks.json`. Herhaalde uitvoeringen hergebruiken vaste taak-id's. Eén proces tegelijk per map. `current=false` betekent niet dat een taak is uitgevoerd. Exitcode `2` betekent een blokkade; `1` een controle- of rapportfout.
 
-`python3 office.py --output office-output` voert drie regelgestuurde rollen uit: techniek, SEO en verkoop. De rollen delen hun controlebevindingen en maken een lokale taakvoorraad en rapporten. Bestaande taken blijven herkenbaar wanneer dezelfde uitvoermap opnieuw wordt gebruikt. `python3 -m unittest test_office.py` controleert de foutafhandeling en voorkomt dat herhaald draaien dezelfde taken verdubbelt.
+## Regie, Techniek, SEO en Sales
 
-Dit zijn vaste regels en conceptteksten, geen zelfstandig denkende AI-agenten. Er is geen model gekoppeld en geen marketingkanaal aangesloten. Het livebetaalaccount is niet geactiveerd of geverifieerd. Verkoop blijft geblokkeerd; omzet blijft onbekend (`null`). De uitvoer meldt deze beperkingen. Een offline demonstratie gebruikt alleen fixtures en telt niet als een websitecontrole.
+[COORDINATOR.md](COORDINATOR.md) bevat het duurzame werkprotocol. Regie bewaakt prioriteiten, afhankelijkheden, credits en de gedeelde taakvoorraad. Techniek controleert bereikbaarheid en levering, SEO werkt auditbevindingen uit en Sales bewaakt product, checkout en marketingvoorbereiding.
 
-De gekozen betaalroute is Stripe/Managed Payments. De gebruiker heeft een Stripe-account aangemaakt; de publieke website en productomschrijving zijn ingevuld. De Postritme-sandbox bevat een product en een Managed Payments-testlink voor €9 eenmalig inclusief belasting; er is nog geen testtransactie uitgevoerd (`ready`). Het liveaccount blijft `blocked`: activatie en verificatie zijn niet afgerond en er is geen echte checkout, levering of productie-APIkoppeling. Deze status is aangeleverde projectinformatie; de publieke HTML-audit controleert het betaalaccount niet. Er staan geen bankgegevens of geheime sleutels in dit project.
+`office.py` voert vaste Python-regels uit, zonder gekoppeld AI-model of marketingkanaal. Een native Codex-heartbeat wordt afzonderlijk ingericht; deze versie claimt nog geen actieve planning of 24/7 beschikbaarheid. Lokale uitvoering vereist een beschikbare computer en Codex-app. Er is geen ingerichte cloud-AI-uitvoering buiten Codex.
 
-Het campagnepakket is klaar: 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. De ZIP bevat 4 Markdown-bestanden en één printbare `LEES-MIJ.html`. De productpagina is openbaar op `/campagnepakket/`, maar het pakket is nog niet te koop. €9 eenmalig is ingesteld als testprijs; de liveprijs is nog niet ingesteld. Na liveactivatie en verificatie moeten het product voor Managed Payments, de checkout en de bestandslevering nog worden ingericht en getest.
+De coördinator moet vóór elke AI-ronde native `get_usage_limits` lezen. Maximaal 1.200 van de opgegeven 1.250 credits mogen worden besteed, met 100 credits reserve: de effectieve grens is 1.150 vanaf het oorspronkelijke saldo. Bij 100 credits resterend of onbekend saldo pauzeert het werk. Dit is een best effort werkinstructie, geen harde accountcap. Python leest het native saldo niet zelf en rapporteert creditcontrole daarom als `blocked`, met onbekend actueel saldo.
 
-De dagelijkse GitHub Actions-controle is voorbereid, maar nog NIET actief: de huidige GitHub-koppeling mag geen workflowbestand toevoegen. Het workflowbestand is lokaal beschikbaar. Na autorisatie kan het worden toegevoegd en uitgevoerd. GitHub kan geplande uitvoeringen vertragen; openbare repositories kunnen na 60 dagen zonder activiteit hun planning verliezen. Controleer dan de Actions-pagina. Dit is technisch toezicht, geen autonome marketing- of omzetagent.
+## Verkoopstatus op 20 september 2026
 
-De voorbereide workflow voert tests en de drie rollen uit en bewaart het rapport als samenvatting van de uitvoering. De GitHub-runner is tijdelijk; de lokale taakvoorraad wordt daar niet tussen uitvoeringen bewaard. Niet-geactiveerde livebetaling verschijnt als `blocked` in het rapport, terwijl een mislukte sitecontrole de workflow laat falen. Het workflowbestand staat nog niet in de externe repository.
+Accountactivatie is in de Stripe-UI voltooid. Liveproduct `prod_VI6OJQdlN0bFkl` bestaat voor €9 eenmalig inclusief belasting. De livecheckout is nog niet gemaakt of ingeschakeld. Een beperkte Checkout-sleutel kon niet worden verkregen doordat `Verification required` blijft laden.
+
+Het campagnepakket bevat 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. De ZIP bevat 4 Markdown-bestanden en één printbare `LEES-MIJ.html`. `/campagnepakket/` is openbaar, maar het pakket is nog niet te koop.
+
+De leveringsbackend heeft volgens de aangeleverde projectstatus acht lokale tests doorstaan. Productiebetaling en levering zijn nog niet van begin tot eind bewezen. De healthcontrole leest live `status`, `storage`, `payments` en `webhooks`; `configured` bewijst alleen de gerapporteerde configuratie. Een gezonde endpoint bewijst geen geslaagde betaling of download. Omzet, bestellingen en bezoekers blijven onbekend (`null`) zonder meetgegevens.
+
+## GitHub
+
+De dagelijkse GitHub Actions-controle is voorbereid maar niet actief. Workflowupload is geweigerd wegens ontbrekende rechten; deze blokkade wordt niet omzeild. Het lokale workflowbestand blijft buiten commits en pushes. De tijdelijke GitHub-runner bewaart zonder aanvullende opslag geen taakvoorraad tussen uitvoeringen.

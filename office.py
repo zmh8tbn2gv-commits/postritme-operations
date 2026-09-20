@@ -3,7 +3,7 @@
 
 Gebruik: python3 office.py --output /pad/naar/rapporten
 Demo:    python3 office.py --offline-demo --output /apart/pad/naar/demo
-Exitcodes: 0 ready, 2 blocked (ook niet-geactiveerde livebetaling), 1 error.
+Exitcodes: 0 ready, 2 blocked (ook ontbrekende checkout of levering), 1 error.
 """
 
 import argparse
@@ -42,6 +42,9 @@ def demo_checks():
 def technique(offline_demo):
     try:
         checks = demo_checks() if offline_demo else monitor.audit()
+        health = {"status": "ready", "url": monitor.ORIGIN + "/api/health",
+                  "flags": {"status": "ok", "storage": "ready", "payments": "disabled", "webhooks": "disabled"},
+                  "error": None, "fixture": True} if offline_demo else monitor.audit_health()
         if not isinstance(checks, list) or len(checks) != len(monitor.PATHS):
             raise ValueError("Audit gaf geen volledige set pagina's terug.")
         if {row["path"] for row in checks} != set(monitor.PATHS):
@@ -54,13 +57,13 @@ def technique(offline_demo):
                 isinstance(issue, str) for issue in row["issues"]
             ):
                 raise ValueError("Ongeldige bevindingen in audit.")
-        failed = any(row["status"] == "error" or not 200 <= row["status"] < 300
+        failed = health["status"] == "error" or any(row["status"] == "error" or not 200 <= row["status"] < 300
                      for row in checks)
         status = "error" if failed else "blocked" if any(row["issues"] for row in checks) else "ready"
-        return {"status": status, "depends_on": [], "checks": checks,
-                "error": None, "scope": "Publieke bereikbaarheid en HTML/SEO; geen functionele plannertest."}
+        return {"status": status, "depends_on": [], "checks": checks, "health": health,
+                "error": None, "scope": "Zeven publieke pagina's en /api/health; geen functionele planner-, betaal- of leveringstest."}
     except Exception as exc:
-        return {"status": "error", "depends_on": [], "checks": [],
+        return {"status": "error", "depends_on": [], "checks": [], "health": None,
                 "error": f"{type(exc).__name__}: {exc}", "scope": "Audit kon niet worden voltooid."}
 
 
@@ -83,9 +86,10 @@ def seo(technical):
 
 
 def sales(technical, seo_result, offline_demo):
-    blockers = ["livebetaling niet geactiveerd", "campagnepakket nog NIET te koop",
-                "Stripe/Managed Payments: sandbox ingericht; liveaccount niet geactiveerd of geverifieerd.",
-                "Geen echte checkout, levering of productie-APIkoppeling ingericht.",
+    blockers = ["livecheckout niet gemaakt of ingeschakeld", "campagnepakket nog NIET te koop",
+                "Leveringsbackend heeft 8 geslaagde lokale tests; productiebetaling en levering nog niet bewezen.",
+                "Stripe-sleutel voor beperkte Checkout-toegang ontbreekt: Verification required blijft laden.",
+                "Betaling en levering zijn nog niet van begin tot eind getest.",
                 "Geen marketingkanaal gekoppeld.",
                 "GitHub-workflowrechten ontbreken; de voorbereide planning is niet actief."]
     if technical["status"] == "error":
@@ -98,10 +102,16 @@ def sales(technical, seo_result, offline_demo):
         "status": "blocked", "depends_on": ["techniek", "seo"],
         "technical_status": technical["status"], "seo_status": seo_result["status"],
         "blockers": blockers,
-        "payment": {"status": "blocked", "provider": "Stripe / Managed Payments", "signal": "livebetaling niet geactiveerd",
+        "payment": {"status": "blocked", "provider": "Stripe / Managed Payments", "signal": "livecheckout niet gemaakt of ingeschakeld",
                     "sandbox_status": "ready", "live_status": "blocked",
+                    "account_activation_ui_status": "ready", "live_product_status": "ready",
+                    "live_product_id": "prod_VI6OJQdlN0bFkl", "price_eur": 9, "tax_included": True,
+                    "checkout_status": "blocked", "checkout_url": None,
                     "source": "Aangeleverde projectstatus; niet vastgesteld via de publieke HTML-audit.",
-                    "verification": "Stripe-account aangemaakt; publieke website en productomschrijving ingevuld. Postritme-sandbox met product en Managed Payments-testlink voor €9 eenmalig inclusief belasting ingericht; nog geen testtransactie uitgevoerd. Ready geldt alleen voor deze inrichting: liveaccount niet geactiveerd of geverifieerd; geen echte checkout, levering of productie-APIkoppeling."},
+                    "verification": "Peildatum 2026-09-20: accountactivatie in de Stripe-UI voltooid en liveproduct prod_VI6OJQdlN0bFkl voor €9 inclusief belasting gemaakt. Livecheckout nog niet gemaakt of ingeschakeld. Dit bewijst nog geen werkende betaal- en leveringsketen."},
+        "delivery": {"status": "blocked", "local_tests_passed": 8, "end_to_end_verified": False,
+                     "public_health": technical["health"],
+                     "source": "Aangeleverde projectstatus op 2026-09-20; backendtests niet door office.py uitgevoerd."},
         "metrics": {"revenue_eur": None, "orders": None, "visitors": None,
                     "source": "Geen meet- of transactiedata aangesloten; onbekend is geen nul."},
         "concepts": [
@@ -116,15 +126,36 @@ def sales(technical, seo_result, offline_demo):
              "cta": "Plan je salonposts gratis", "destination": "/contentkalender-kappers-beauty/",
              "next_step": "Controleer de plannerroute en werk drie voorbeelden uit zonder klantfoto's of onbewezen resultaatclaims."},
             {"id": "campagnepakket-concept", "status": "blocked", "offer": "Apart campagnepakket — nog NIET te koop",
-             "proposed_intro_price_eur": 9, "price_status": "Eenmalige testprijs inclusief belasting; nog niet live.",
+             "price_eur": 9, "price_status": "Eenmalige prijs inclusief belasting ingesteld in Stripe-liveproduct; checkout nog niet beschikbaar.",
              "audience": "Ondernemers die meer uitgewerkte campagne-inhoud willen",
              "channel": "Openbare productpagina; nog geen checkout",
              "copy": "Het campagnepakket is klaar: 36 briefings, 12 per branche voor 3 branches, met vier weken per branche. De ZIP bevat 4 Markdown-bestanden en één printbare LEES-MIJ.html. Nog niet te koop.",
              "cta": "Nog niet te koop", "destination": "/campagnepakket/",
-             "next_step": "Rond liveactivatie en verificatie bij Stripe af; bevestig prijs en voorwaarden; richt het product voor Managed Payments in en test checkout en bestandslevering."},
+             "next_step": "Laat Techniek de backenddeployment en levering controleren; los de Stripe-verificatie op; maak daarna de livecheckout voor het bestaande product en test betaling en bestandslevering voordat de koopknop wordt ingeschakeld."},
         ],
         "concept_status_note": "Ready betekent lokaal uitgewerkt concept, geen gepubliceerde of goedgekeurde campagne.",
         "actions_executed": [],
+    }
+
+
+def coordination(roles):
+    return {
+        "status": "blocked", "name": "Regie — hoofdcoördinator",
+        "depends_on": ["techniek", "seo", "verkoop"],
+        "role_statuses": {name: role["status"] for name, role in roles.items()},
+        "next_action": "Herstel de publieke audit." if roles["techniek"]["status"] == "error" else
+                       "Controleer credits en de backenddeployment; rond levering af en test daarna checkout en levering.",
+        "protocol": "COORDINATOR.md", "parallel_runs": 1,
+        "heartbeat": {"status": "blocked", "active": False, "reason": "Nog niet ingericht in deze projectstatus."},
+        "credit_guard": {
+            "status": "blocked", "remaining_credits": None,
+            "initial_credits_user_reported": 1250, "max_spend_credits": 1200, "reserve_credits": 100,
+            "effective_spend_ceiling_from_initial": 1150,
+            "required_tool": "mcp__codex_app__get_usage_limits",
+            "reason": "Native actuele creditmeting vereist vóór elke AI-ronde; office.py leest deze niet zelf.",
+            "stop_rule": "Pauzeer bij saldo <= 100, onbekend saldo of bereikte bestedingsgrens.",
+            "enforcement": "Best effort instructie voor de coördinator; geen harde accountcap of Python-AI-integratie.",
+        },
     }
 
 
@@ -138,11 +169,21 @@ def task_candidates(roles):
         tasks.append({"key": "seo:" + item["path"] + ":" + item["issue"], "role": "seo",
                       "status": "ready", "priority": item["priority"],
                       "title": item["path"] + " — " + item["issue"], "detail": item["action"]})
+    tasks.extend([
+        {"key": "regie:credits", "role": "regie", "status": "blocked", "priority": 1,
+         "title": "Actuele credits controleren vóór vervolgwerk", "detail": roles["regie"]["credit_guard"]["reason"] + " " + roles["regie"]["credit_guard"]["stop_rule"]},
+        {"key": "regie:heartbeat", "role": "regie", "status": "ready", "priority": 2,
+         "title": "Native heartbeat inrichten", "detail": "Gebruik COORDINATOR.md, één coördinator tegelijk en meld alleen betekenisvolle verandering. Nog niet actief."},
+        {"key": "techniek:levering", "role": "techniek", "status": "ready", "priority": 1,
+         "title": "Backenddeployment en levering controleren", "detail": "Backend: 8 lokale tests geslaagd. Controleer /api/health, productieconfiguratie en geautoriseerde bestandslevering vóór livecheckout; disabled flags zijn geen betaalmogelijkheid."},
+        {"key": "seo:meting", "role": "seo", "status": "blocked", "priority": 3,
+         "title": "Zoekprestaties meetbaar maken", "detail": "Search Console en verkeersgegevens ontbreken. Regel toegang voordat ranking, verkeer of conversie als resultaat wordt gerapporteerd."},
+    ])
     tasks.append({"key": "verkoop:betaalprovider", "role": "verkoop", "status": "blocked", "priority": 1,
-                  "title": "Livebetaling niet geactiveerd", "detail": "Stripe-account en Postritme-sandbox voor online verkoop/Managed Payments zijn ingericht. De bevoegde eigenaar moet het liveaccount activeren en verifiëren. Echte checkout, levering en productie-APIkoppeling ontbreken."})
+                  "title": "Stripe-verificatie oplossen en livecheckout testen", "detail": "Accountactivatie-UI voltooid; Stripe-liveproduct prod_VI6OJQdlN0bFkl voor €9 inclusief belasting bestaat. Beperkte Checkout-sleutel ontbreekt doordat Verification required blijft laden. Checkout nog niet gemaakt; eerst werkende levering nodig."})
     tasks.append({"key": "verkoop:marketingkanaal", "role": "verkoop", "status": "blocked", "priority": 2,
                   "title": "Geen marketingkanaal gekoppeld", "detail": "Kies een kanaal en regel toegang en toestemming voordat een concept kan worden gepubliceerd of verstuurd."})
-    tasks.append({"key": "verkoop:workflowrechten", "role": "verkoop", "status": "blocked", "priority": 2,
+    tasks.append({"key": "verkoop:workflowrechten", "role": "regie", "status": "blocked", "priority": 2,
                   "title": "GitHub-workflowrechten ontbreken", "detail": "De bestaande GitHub-koppeling weigert workflowrechten; de voorbereide beheerplanning is niet actief. Rechten moeten via de bevoegde eigenaar worden geregeld."})
     for concept in roles["verkoop"]["concepts"]:
         tasks.append({"key": "verkoop:" + concept["id"], "role": "verkoop", "status": concept["status"],
@@ -191,7 +232,10 @@ def markdown(report):
     roles = report["roles"]
     lines = ["# Postritme beheerrapport", "", "**" + report["evidence_label"] + "**", "",
              "Status: **" + report["status"] + "** · " + report["checked_at"], "",
-             "Drie regelgestuurde Python-rollen. Geen LLM/API-integratie of autonome AI. Geen publicatie, mail, betaling of planning uitgevoerd.", "",
+             "Vier regelgestuurde rollen: Regie, Techniek, SEO en Sales. Geen LLM/API-integratie of autonome AI in dit script. Geen publicatie, mail, betaling of planning uitgevoerd.", "",
+             "## Regie — hoofdcoördinator", "", "Status: **" + roles["regie"]["status"] + "**. " + roles["regie"]["next_action"], "",
+             "Native heartbeat nog niet ingericht. Volg COORDINATOR.md; voer één ronde tegelijk uit.", "",
+             "Creditcontrole: **blocked**. Actueel saldo onbekend in dit rapport. Maximaal 1.200 van opgegeven 1.250 credits, met 100 credits reserve: effectieve bestedingsgrens 1.150. Controleer native get_usage_limits vóór elke AI-ronde en pauzeer bij onbekend saldo of 100 credits resterend. Best effort; geen harde accountcap.", "",
              "## Techniek en SEO", "",
              "Techniek: **" + roles["techniek"]["status"] + "**. SEO: **" + roles["seo"]["status"] + "**.", "",
              roles["techniek"]["scope"], ""]
@@ -199,6 +243,10 @@ def markdown(report):
         lines += ["Auditfout: " + roles["techniek"]["error"], ""]
     for row in roles["techniek"]["checks"]:
         lines.append("- " + row["path"] + ": " + str(row["status"]) + " — " + ("; ".join(row["issues"]) or "geen HTML-bevindingen"))
+    health = roles["techniek"]["health"]
+    if health:
+        lines += ["", "/api/health: **" + health["status"] + "**. " + (json.dumps(health["flags"], ensure_ascii=False) if health["flags"] else health["error"]), "",
+                  "De flags tonen alleen de gerapporteerde configuratie; geen bewijs van betaling, uitbetaling of bestandslevering."]
     lines += ["", "SEO-prioriteiten (1 eerst):", ""]
     for item in roles["seo"]["priorities"]:
         lines.append(f"- P{item['priority']} {item['path']} — {item['issue']}: {item['action']}")
@@ -208,6 +256,7 @@ def markdown(report):
     lines += ["- " + blocker for blocker in roles["verkoop"]["blockers"]]
     lines += ["", "Betaalroute: " + roles["verkoop"]["payment"]["provider"] + ". Sandbox: **" + roles["verkoop"]["payment"]["sandbox_status"] + "**; live: **" + roles["verkoop"]["payment"]["live_status"] + "**.", "",
               roles["verkoop"]["payment"]["verification"], "",
+              "Levering: **blocked**. Backend heeft 8 lokale tests doorstaan volgens aangeleverde projectstatus; productiebetaling en levering zijn nog niet bewezen.", "",
               roles["verkoop"]["payment"]["source"], "",
               "Omzet, bestellingen en bezoekers: **onbekend (null)**. Er is geen transactiemeting aangesloten.", "",
               roles["verkoop"]["concept_status_note"], ""]
@@ -215,8 +264,8 @@ def markdown(report):
         lines += ["### " + concept["offer"], "", f"Status: {concept['status']}. Doelgroep: {concept['audience']}.", "",
                   "Kanaal: " + concept["channel"], "", "Concepttekst: “" + concept["copy"] + "”", "",
                   "CTA: “" + concept["cta"] + "”", "", "Volgende stap: " + concept["next_step"], ""]
-        if "proposed_intro_price_eur" in concept:
-            lines += ["Prijsvoorstel: €" + str(concept["proposed_intro_price_eur"]) + " eenmalig. " + concept["price_status"], ""]
+        if "price_eur" in concept:
+            lines += ["Prijs: €" + str(concept["price_eur"]) + " eenmalig. " + concept["price_status"], ""]
     lines += ["## Lokale taakvoorraad", "", "Status: " + report["inventory"]["status"], "",
               "tasks.json hergebruikt vaste taak-id's. current=false betekent alleen dat een taak niet uit de huidige audit volgt; niet dat hij is uitgevoerd. Voer één proces tegelijk uit per outputmap.", ""]
     if report["inventory"]["error"]:
@@ -236,6 +285,7 @@ def run(output, offline_demo=False):
     roles = {"techniek": technique(offline_demo)}
     roles["seo"] = seo(roles["techniek"])
     roles["verkoop"] = sales(roles["techniek"], roles["seo"], offline_demo)
+    roles["regie"] = coordination(roles)
     try:
         inventory = update_inventory(output / "tasks.json", mode, task_candidates(roles), checked_at)
         inventory.update(status="ready", error=None)

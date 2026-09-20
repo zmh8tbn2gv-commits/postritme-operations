@@ -14,6 +14,11 @@ class OfficeTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.output = Path(self.temp.name)
+        health = {"status": "ready", "url": office.monitor.ORIGIN + "/api/health",
+                  "flags": {"status": "ok", "storage": "ready", "payments": "disabled", "webhooks": "disabled"}, "error": None}
+        self.health_patch = patch.object(office.monitor, "audit_health", return_value=health)
+        self.health_patch.start()
+        self.addCleanup(self.health_patch.stop)
 
     def test_repeated_run_has_no_duplicate_tasks(self):
         first = office.run(self.output, offline_demo=True)
@@ -22,6 +27,8 @@ class OfficeTests(unittest.TestCase):
         after = {task["id"]: task["created_at"] for task in second["inventory"]["tasks"]}
         self.assertEqual(before, after)
         self.assertEqual(len(after), len(second["inventory"]["tasks"]))
+        self.assertEqual({task["role"] for task in second["inventory"]["tasks"]},
+                         {"regie", "techniek", "seo", "verkoop"})
         stored = json.loads((self.output / "tasks.json").read_text())
         self.assertEqual(stored["tasks"], second["inventory"]["tasks"])
 
@@ -59,11 +66,18 @@ class OfficeTests(unittest.TestCase):
         self.assertIsNone(saved["roles"]["verkoop"]["metrics"]["orders"])
         self.assertEqual(len(saved["roles"]["verkoop"]["concepts"]), 3)
         self.assertEqual(saved["roles"]["verkoop"]["concepts"][2]["status"], "blocked")
-        self.assertIn("livebetaling niet geactiveerd", saved["roles"]["verkoop"]["blockers"])
+        self.assertIn("livecheckout niet gemaakt of ingeschakeld", saved["roles"]["verkoop"]["blockers"])
         payment = saved["roles"]["verkoop"]["payment"]
         self.assertEqual(payment["provider"], "Stripe / Managed Payments")
         self.assertEqual(payment["sandbox_status"], "ready")
         self.assertEqual(payment["live_status"], "blocked")
+        self.assertEqual(payment["account_activation_ui_status"], "ready")
+        self.assertEqual(payment["live_product_status"], "ready")
+        self.assertIsNone(payment["checkout_url"])
+        self.assertFalse(saved["roles"]["verkoop"]["delivery"]["end_to_end_verified"])
+        self.assertEqual(saved["roles"]["regie"]["credit_guard"]["status"], "blocked")
+        self.assertIsNone(saved["roles"]["regie"]["credit_guard"]["remaining_credits"])
+        self.assertFalse(saved["roles"]["regie"]["heartbeat"]["active"])
 
     def test_demo_never_calls_live_audit_and_is_visibly_marked(self):
         with patch.object(office.monitor, "audit", side_effect=AssertionError("demo network call")) as audit:
@@ -95,6 +109,27 @@ class OfficeTests(unittest.TestCase):
             report = office.run(self.output)
         self.assertEqual(report["inventory"]["status"], "error")
         self.assertEqual((self.output / "tasks.json").read_text(), before)
+
+
+class HealthTests(unittest.TestCase):
+    def test_public_health_only_returns_expected_flags(self):
+        with patch.object(office.monitor.urllib.request, "urlopen") as request:
+            response = request.return_value.__enter__.return_value
+            response.url = office.monitor.ORIGIN + "/api/health"
+            response.read.return_value = b'{"status":"ok","storage":"ready","payments":"disabled","webhooks":"disabled","extra":"ignored"}'
+            health = office.monitor.audit_health()
+        self.assertEqual(health["status"], "ready")
+        self.assertEqual(set(health["flags"]), {"status", "storage", "payments", "webhooks"})
+        self.assertEqual(health["flags"]["payments"], "disabled")
+
+    def test_incomplete_health_payload_is_error(self):
+        with patch.object(office.monitor.urllib.request, "urlopen") as request:
+            response = request.return_value.__enter__.return_value
+            response.url = office.monitor.ORIGIN + "/api/health"
+            response.read.return_value = b'{"status":"ok"}'
+            health = office.monitor.audit_health()
+        self.assertEqual(health["status"], "error")
+        self.assertIsNone(health["flags"])
 
 
 if __name__ == "__main__":
